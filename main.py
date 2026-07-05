@@ -24,10 +24,109 @@ def main():
     clock = pygame.time.Clock()
     FPS = 60
 
+    # ========== 加载画面函数 ==========
+    def show_loading_screen(duration=1.0):
+        """显示加载画面，显示"东方复刻"标题和进度条 (不会擅自停止音乐)"""
+        loading = True
+        progress = 0
+        font_path = r"C:\Windows\Fonts\simsun.ttc"
+
+        while loading:
+            clock.tick(FPS)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+            # 先快后慢的进度增长
+            if progress < 30:
+                progress += 1.5
+            elif progress < 60:
+                progress += 0.8
+            elif progress < 80:
+                progress += 0.4
+            elif progress < 95:
+                progress += 0.2
+            elif progress < 100:
+                progress += 0.05
+
+            if progress >= 100:
+                progress = 100
+                loading = False
+
+            screen.fill((0, 0, 0))
+
+            # 标题 - 统一显示"东方复刻"
+            ft_title = pygame.font.Font(font_path, 80)
+            title_render = ft_title.render("东方复刻", True, (255, 215, 0))
+            title_rect = title_render.get_rect(center=(width // 2, height // 2 - 80))
+            screen.blit(title_render, title_rect)
+
+            # 进度条背景
+            bar_width = 400
+            bar_height = 20
+            bar_x = (width - bar_width) // 2
+            bar_y = height // 2 + 20
+            pygame.draw.rect(screen, (60, 60, 60), (bar_x, bar_y, bar_width, bar_height))
+
+            # 进度条填充
+            fill_width = int(bar_width * (progress / 100))
+            pygame.draw.rect(screen, (255, 215, 0), (bar_x, bar_y, fill_width, bar_height))
+
+            # 进度百分比
+            ft_progress = pygame.font.Font(font_path, 24)
+            progress_text = ft_progress.render(f"{int(progress)}%", True, (200, 200, 200))
+            progress_rect = progress_text.get_rect(center=(width // 2, bar_y + bar_height + 30))
+            screen.blit(progress_text, progress_rect)
+
+            pygame.display.flip()
+
+        # 加载完成后短暂停留
+        total_frames = int(duration * FPS)
+        for frame in range(total_frames):
+            clock.tick(FPS)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+            screen.fill((0, 0, 0))
+            ft_title = pygame.font.Font(font_path, 80)
+            title_render = ft_title.render("东方复刻", True, (255, 215, 0))
+            title_rect = title_render.get_rect(center=(width // 2, height // 2 - 80))
+            screen.blit(title_render, title_rect)
+
+            bar_width = 400
+            bar_height = 20
+            bar_x = (width - bar_width) // 2
+            bar_y = height // 2 + 20
+            pygame.draw.rect(screen, (60, 60, 60), (bar_x, bar_y, bar_width, bar_height))
+            pygame.draw.rect(screen, (255, 215, 0), (bar_x, bar_y, bar_width, bar_height))
+
+            ft_progress = pygame.font.Font(font_path, 24)
+            progress_text = ft_progress.render("100%", True, (200, 200, 200))
+            progress_rect = progress_text.get_rect(center=(width // 2, bar_y + bar_height + 30))
+            screen.blit(progress_text, progress_rect)
+            pygame.display.flip()
+
+    # 显示初始加载画面 (这个只在程序刚启动时显示)
+    show_loading_screen(0.5)
+
+    # ========== 难度配置 ==========
+    DIFFICULTY_CONFIG = {
+        'EASY': {'life': 50, 'ex': 20},
+        'NORMAL': {'life': 30, 'ex': 15},
+        'HARD': {'life': 20, 'ex': 7},
+        'INSANE': {'life': 15, 'ex': 5},
+        'HELL': {'life': 8, 'ex': 3}
+    }
+
+    # 默认难度
+    selected_difficulty = 'NORMAL'
+
     # ========== 启动页面 ==========
     font_path = r"C:\Windows\Fonts\simsun.ttc"
 
-    # 先加载并播放音乐
+    # 加载并播放音乐
     try:
         pygame.mixer.music.load("bgm/badapple 8bit.mp3")
         pygame.mixer.music.play(-1, 1.2)
@@ -35,10 +134,18 @@ def main():
     except Exception as e:
         print(f"BGM加载失败: {e}")
 
-
     show_title = True
     title_timer = 0
     title_alpha = 255
+
+    # 难度选择状态
+    selecting_difficulty = False
+    difficulty_index = 1  # 默认NORMAL
+    difficulty_names = ['EASY', 'NORMAL', 'HARD', 'INSANE', 'HELL']
+
+    # 主菜单选项
+    menu_index = 0
+    menu_options = ['START', 'EXIT']
 
     while show_title:
         clock.tick(FPS)
@@ -47,8 +154,31 @@ def main():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    show_title = False
+                if event.key == pygame.K_ESCAPE:
+                    if selecting_difficulty:
+                        selecting_difficulty = False
+                if event.key == pygame.K_UP or event.key == pygame.K_w:
+                    if selecting_difficulty:
+                        difficulty_index = (difficulty_index - 1) % len(difficulty_names)
+                    else:
+                        menu_index = (menu_index - 1) % len(menu_options)
+                elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                    if selecting_difficulty:
+                        difficulty_index = (difficulty_index + 1) % len(difficulty_names)
+                    else:
+                        menu_index = (menu_index + 1) % len(menu_options)
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                    if selecting_difficulty:
+                        # 确认选择难度
+                        selected_difficulty = difficulty_names[difficulty_index]
+                        show_title = False
+                    else:
+                        # 执行菜单选项
+                        if menu_index == 0:  # START
+                            selecting_difficulty = True
+                        elif menu_index == 1:  # EXIT
+                            pygame.quit()
+                            sys.exit()
 
         # 标题渐变效果
         title_timer += 1
@@ -60,25 +190,67 @@ def main():
 
         screen.fill((0, 0, 0))
 
-        # 主标题
-        ft_title = pygame.font.Font(font_path, 80)
-        title_text = ft_title.render("东方复刻", True, (255, 215, 0))
-        title_text.set_alpha(title_alpha)
-        title_rect = title_text.get_rect(center=(width // 2, height // 2 - 60))
-        screen.blit(title_text, title_rect)
+        if not selecting_difficulty:
+            # 主标题
+            ft_title = pygame.font.Font(font_path, 80)
+            title_text = ft_title.render("东方复刻", True, (255, 215, 0))
+            title_text.set_alpha(title_alpha)
+            title_rect = title_text.get_rect(center=(width // 2, height // 2 - 100))
+            screen.blit(title_text, title_rect)
 
-        # 副标题
-        ft_sub = pygame.font.Font(font_path, 30)
-        sub_text = ft_sub.render("v2.0", True, (200, 200, 200))
-        sub_rect = sub_text.get_rect(center=(width // 2, height // 2))
-        screen.blit(sub_text, sub_rect)
+            # 副标题
+            ft_sub = pygame.font.Font(font_path, 30)
+            sub_text = ft_sub.render("v2.58", True, (200, 200, 200))
+            sub_rect = sub_text.get_rect(center=(width // 2, height // 2 - 40))
+            screen.blit(sub_text, sub_rect)
 
-        # 开始提示（闪烁）
-        if title_timer < 45:
-            ft_start = pygame.font.Font(font_path, 25)
-            start_text = ft_start.render("press SPACE to start", True, (255, 255, 255))
-            start_rect = start_text.get_rect(center=(width // 2, height // 2 + 80))
-            screen.blit(start_text, start_rect)
+            # 菜单选项
+            for i, option in enumerate(menu_options):
+                y_pos = height // 2 + 20 + i * 50
+                if i == menu_index:
+                    color = (255, 215, 0)
+                    prefix = "▶ "
+                else:
+                    color = (200, 200, 200)
+                    prefix = "  "
+
+                ft_option = pygame.font.Font(font_path, 30)
+                option_text = ft_option.render(f"{prefix}{option}", True, color)
+                option_rect = option_text.get_rect(center=(width // 2, y_pos))
+                screen.blit(option_text, option_rect)
+
+        else:
+            # 难度选择界面
+            ft_title = pygame.font.Font(font_path, 60)
+            title_text = ft_title.render("选择难度", True, (255, 215, 0))
+            title_rect = title_text.get_rect(center=(width // 2, height // 2 - 180))
+            screen.blit(title_text, title_rect)
+
+            ft_note = pygame.font.Font(font_path, 18)
+            note_text = ft_note.render("↑ ↓ 选择  ENTER/SPACE 确认  ESC 返回", True, (200, 200, 200))
+            note_rect = note_text.get_rect(center=(width // 2, height // 2 - 130))
+            screen.blit(note_text, note_rect)
+
+            # 显示所有难度选项
+            for i, name in enumerate(difficulty_names):
+                y_pos = height // 2 - 60 + i * 50
+                config = DIFFICULTY_CONFIG[name]
+
+                # 高亮当前选中的选项
+                if i == difficulty_index:
+                    color = (255, 215, 0)
+                    prefix = "▶ "
+                else:
+                    color = (200, 200, 200)
+                    prefix = "  "
+
+                ft_option = pygame.font.Font(font_path, 30)
+                option_text = ft_option.render(
+                    f"{prefix}{name}  (Life: {config['life']}  EX: {config['ex']})",
+                    True, color
+                )
+                option_rect = option_text.get_rect(center=(width // 2, y_pos))
+                screen.blit(option_text, option_rect)
 
         ft_copyright = pygame.font.Font(font_path, 14)
         copyright_text1 = ft_copyright.render("请勿未经允许用于商用", True, (150, 150, 150))
@@ -91,15 +263,14 @@ def main():
 
         pygame.display.flip()
 
+    # 应用难度设置
+    difficulty_config = DIFFICULTY_CONFIG[selected_difficulty]
+    max_hp = difficulty_config['life']
+    hp = max_hp
+    EX_MAX_COUNT = difficulty_config['ex']
+    ex_count = EX_MAX_COUNT
 
-
-    # 加载背景音乐
-    try:
-        pygame.mixer.music.load("bgm/badapple 8bit.mp3")
-        pygame.mixer.music.play(-1, 1.2)
-        pygame.mixer.music.set_volume(0.6)
-    except Exception as e:
-        print(f"BGM加载失败: {e}")
+    print(f"难度: {selected_difficulty}, 生命: {max_hp}, EX: {EX_MAX_COUNT}")
 
     MISSION_SHOW_TIME = 2 * FPS
     mission_timer = 0
@@ -108,10 +279,8 @@ def main():
     EX_RESPAWN_DELAY = 2 * FPS  # 2秒延迟
 
     # ========== EX必杀系统 ==========
-    EX_MAX_COUNT = 7
     EX_FLASH_TIME = 1 * FPS  # 白闪1秒
     EX_DURATION = 7 * FPS
-    ex_count = EX_MAX_COUNT
     ex_flash_timer = 0
     ex_power_timer = 0
 
@@ -310,10 +479,8 @@ def main():
     IMG_UNKNOWN = load_img("img/unknown.webp", 80, 80)
     IMG_DARK_PLAYER = load_img("img/dark_player.png", 60, 70)
 
-    # 分数血量
+    # 分数血量 - 已经根据难度设置了 max_hp 和 hp
     score = 0
-    max_hp = 20
-    hp = max_hp
 
     # 字体
     font = pygame.font.Font(font_path, 16)
@@ -326,14 +493,18 @@ def main():
     INVINCIBLE_FRAME_TOTAL = INVINCIBLE_SEC * FPS
 
     # ========== 关卡过渡系统 ==========
-    stage_transition = True
+    stage_transition = False  # 是否正在显示“关卡标题”过渡（图三）
     stage_transition_timer = 0
     STAGE_TRANSITION_DELAY = 2 * FPS
-    stage_title = "STAGE 1 - Night Galaxy"
+    stage_title = ""
 
     # 阶段标记
     stage2 = False
     stage3 = False
+
+    # 新增：关卡加载状态 (管理图二的加载状态)
+    is_loading_stage = True  # 初始为True，进入第一关前先加载图二
+    need_spawn_after_load = False  # 标记加载图二完成后是否生怪并转图三
 
     # BOSS1参数
     kill_enemy_target = 30
@@ -422,6 +593,11 @@ def main():
     mission3_complete = False
     mission3_timer = 0
     MISSION3_SHOW_TIME = 2 * FPS
+
+    # ========== 暂停状态 ==========
+    game_paused = False
+    pause_menu_index = 0
+    pause_options = ['CONTINUE', 'BACK MENU']
 
     # -----------------------玩家类------------------------
     class Player(pygame.sprite.Sprite):
@@ -748,7 +924,7 @@ def main():
                 420,  # 百箭齐发 - 7秒
                 420,  # 瞬移突袭 - 7秒
                 240,  # 暗黑旋转弹幕 - 4秒
-                480   # 分身术 - 8秒
+                480  # 分身术 - 8秒
             ]
             self.SKILL_NAMES = ['结界', '护盾', '百箭', '瞬移', '旋转', '分身']
             self.current_skill = 0
@@ -1322,11 +1498,6 @@ def main():
     all_sprites.add(dark_clone_bullet_group)
     all_sprites.add(dark_clone_group)
 
-    # 设置初始关卡过渡
-    stage_transition = True
-    stage_transition_timer = 0
-    stage_title = "STAGE 1 - Night Galaxy"
-
     shoot_timer = 0
     shoot_cd = 6
 
@@ -1363,25 +1534,65 @@ def main():
                         enemy3_group.add(new_e3)
 
         # ========== 关卡过渡更新 ==========
-        if stage_transition:
+        if is_loading_stage:
+            # 关键修正：直接调用加载画面函数，它内部包含动画循环和渲染
+            show_loading_screen(0.5)
+            # 动画播放完，状态变更为准备显示图三标题
+            is_loading_stage = False
+            need_spawn_after_load = True
+
+        if need_spawn_after_load:
+            need_spawn_after_load = False
+            # 加载结束，切换为图三（关卡标题过渡）
+            stage_transition = True
+            stage_transition_timer = 0
+
+            # 在这里生成该关卡的第一波敌人，并切换BGM（图三显示时音乐就响起）
+            if not stage2 and not stage3:
+                stage_title = "STAGE 1 - Night Galaxy"
+                for _ in range(random.randint(5, 9)):
+                    e = Enemy()
+                    all_sprites.add(e)
+                    enemies.add(e)
+                # 播放第一关音乐
+                try:
+                    pygame.mixer.music.load("bgm/Level 1.mp3")  # 假设你的第一关音乐叫Level 1.mp3，如果你的叫badapple，请改回来
+                    pygame.mixer.music.play(-1)
+                    pygame.mixer.music.set_volume(0.6)
+                except Exception as e:
+                    print(f"第一关BGM加载失败: {e}")
+            elif stage2:
+                stage_title = "STAGE 2 - Midnight Storm"
+                for _ in range(random.randint(5, 10)):
+                    e2 = Enemy2()
+                    all_sprites.add(e2)
+                    enemy2_group.add(e2)
+                # 播放第二关音乐
+                try:
+                    pygame.mixer.music.load("bgm/Level 2.mp3")
+                    pygame.mixer.music.play(-1)
+                    pygame.mixer.music.set_volume(0.6)
+                except Exception as e:
+                    print(f"第二关BGM加载失败: {e}")
+            elif stage3:
+                stage_title = "STAGE 3 - Lava Hell"
+                for _ in range(random.randint(3, 6)):
+                    e3 = Enemy3()
+                    all_sprites.add(e3)
+                    enemy3_group.add(e3)
+                # 播放第三关音乐
+                try:
+                    pygame.mixer.music.load("bgm/Level 3.mp3")
+                    pygame.mixer.music.play(-1, 6)
+                    pygame.mixer.music.set_volume(0.6)
+                except Exception as e:
+                    print(f"第三关BGM加载失败: {e}")
+
+        elif stage_transition:
+            # 正在显示图三：关卡标题过渡（STAGE X - XXX）
             stage_transition_timer += 1
             if stage_transition_timer >= STAGE_TRANSITION_DELAY:
-                stage_transition = False
-                if not stage2 and not stage3:
-                    for _ in range(random.randint(5, 9)):
-                        e = Enemy()
-                        all_sprites.add(e)
-                        enemies.add(e)
-                elif stage2:
-                    for _ in range(random.randint(5, 10)):
-                        e2 = Enemy2()
-                        all_sprites.add(e2)
-                        enemy2_group.add(e2)
-                elif stage3:
-                    for _ in range(random.randint(3, 6)):
-                        e3 = Enemy3()
-                        all_sprites.add(e3)
-                        enemy3_group.add(e3)
+                stage_transition = False  # 图三结束，正式开始游戏
 
         # 背景渐变
         if not stage2 and not stage3:
@@ -1425,7 +1636,7 @@ def main():
                     lightning_flash_frames = LIGHTNING_FLASH_MAX
 
         # ========== 第三关逻辑 ==========
-        if stage3 and not stage_transition and not game_clear:
+        if stage3 and not stage_transition and not game_clear and not game_paused:
             # 生成enemy3 - 只在非隐藏BOSS阶段且非双BOSS阶段
             if not hidden_boss_phase and not enemy4_spawned and not dark_boss_exist:
                 enemy3_spawn_timer += 1
@@ -1508,8 +1719,39 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if game_over or game_clear:
+                        # gameover或excellent界面按ESC无反应
+                        pass
+                    elif game_paused:
+                        # 暂停界面按ESC关闭暂停（继续游戏）
+                        game_paused = False
+                    else:
+                        # 游戏中按ESC暂停
+                        game_paused = True
+                        pause_menu_index = 0
+                if event.key == pygame.K_UP or event.key == pygame.K_w:
+                    if game_paused:
+                        pause_menu_index = (pause_menu_index - 1) % len(pause_options)
+                if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                    if game_paused:
+                        pause_menu_index = (pause_menu_index + 1) % len(pause_options)
+                if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                    if game_over or game_clear:
+                        # gameover或excellent界面按空格/回车返回标题界面
+                        show_title = True
+                        game_over = False
+                        game_clear = False
+                        running = False
+                    elif game_paused:
+                        if pause_menu_index == 0:  # CONTINUE
+                            game_paused = False
+                        elif pause_menu_index == 1:  # BACK MENU
+                            show_title = True
+                            game_paused = False
+                            running = False
                 if event.key == pygame.K_RETURN:
-                    if ex_count > 0 and not game_over and not mission_complete and not mission2_complete and not mission3_complete and not game_clear:
+                    if ex_count > 0 and not game_over and not mission_complete and not mission2_complete and not mission3_complete and not game_clear and not game_paused:
                         ex_count -= 1
                         ex_flash_timer = EX_FLASH_TIME
                         ex_power_timer = EX_DURATION
@@ -1546,9 +1788,9 @@ def main():
                         giant_enemy3_group.empty()
 
                         # 清除暗黑灵梦的子弹（保留分身）
-                        dark_ring_group.empty()          # 暗影结界
-                        dark_arrow_group.empty()         # 百箭齐发
-                        dark_ring2_group.empty()         # 旋转弹幕
+                        dark_ring_group.empty()  # 暗影结界
+                        dark_arrow_group.empty()  # 百箭齐发
+                        dark_ring2_group.empty()  # 旋转弹幕
                         dark_clone_bullet_group.empty()  # 分身子弹
                         # 注意：不清除 dark_clone_group（保留分身）
 
@@ -1558,6 +1800,11 @@ def main():
                             ex_respawn_timer = EX_RESPAWN_DELAY
                         elif stage3 and not enemy4_spawned and not dark_boss_exist and not hidden_boss_phase:
                             ex_respawn_timer = EX_RESPAWN_DELAY
+
+        # 如果游戏结束或通关，回到主菜单
+        if (game_over or game_clear) and not running:
+            # 已经在事件中处理了
+            pass
 
         if not game_over:
             # 第一关通关倒计时
@@ -1570,17 +1817,13 @@ def main():
                     boss_group.empty()
                     boss_bullets.empty()
                     stage2 = True
-                    stage_transition = True
-                    stage_transition_timer = 0
+                    # 修改此处：关闭图三状态，打开加载状态（图二）
+                    stage_transition = False
+                    is_loading_stage = True
+                    need_spawn_after_load = False
                     stage_title = "STAGE 2 - Midnight Storm"
                     bg_gray_val = bg_gray_max
                     bg_gray_darken = True
-                    try:
-                        pygame.mixer.music.load("bgm/Level 2.mp3")
-                        pygame.mixer.music.play(-1)
-                        pygame.mixer.music.set_volume(0.6)
-                    except Exception as e:
-                        print(f"第二关BGM加载失败: {e}")
 
             # 第二关通关倒计时 -> 进入第三关
             if mission2_complete:
@@ -1590,19 +1833,15 @@ def main():
                     mission2_timer = 0
                     stage2 = False
                     stage3 = True
-                    stage_transition = True
-                    stage_transition_timer = 0
+                    # 修改此处：关闭图三状态，打开加载状态（图二）
+                    stage_transition = False
+                    is_loading_stage = True
+                    need_spawn_after_load = False
                     stage_title = "STAGE 3 - Lava Hell"
                     enemy2_group.empty()
                     boss2_group.empty()
                     boss2_bullet_group.empty()
                     boss2_bullet2_group.empty()
-                    try:
-                        pygame.mixer.music.load("bgm/Level 3.mp3")
-                        pygame.mixer.music.play(-1, 6)
-                        pygame.mixer.music.set_volume(0.6)
-                    except Exception as e:
-                        print(f"第三关BGM加载失败: {e}")
 
             # ========== 通关状态 ==========
             if game_clear:
@@ -1626,7 +1865,7 @@ def main():
             if invincible_frame > 0:
                 invincible_frame -= 1
 
-            # 射击判定
+            # 射击判定（暂停时不射击）
             key_state = pygame.key.get_pressed()
 
             if ex_power_timer > 0:
@@ -1635,7 +1874,7 @@ def main():
                 current_shoot_cd = shoot_cd
 
             if not stage_transition and key_state[
-                pygame.K_SPACE] and shoot_timer > current_shoot_cd and not mission_complete and not mission2_complete and not mission3_complete and not game_clear:
+                pygame.K_SPACE] and shoot_timer > current_shoot_cd and not mission_complete and not mission2_complete and not mission3_complete and not game_clear and not game_paused:
                 if ex_power_timer > 0:
                     player.shoot_ex()
                 else:
@@ -1643,7 +1882,7 @@ def main():
                 shoot_timer = 0
 
             # ========== 第一阶段碰撞逻辑 ==========
-            if not stage2 and not stage3 and not game_clear:
+            if not stage2 and not stage3 and not game_clear and not game_paused:
                 hit_enemy = pygame.sprite.groupcollide(enemies, bullets, True, True)
                 need_spawn_boss = False
                 for _ in hit_enemy:
@@ -1705,7 +1944,7 @@ def main():
                             all_sprites.empty()
 
             # ========== 第二阶段碰撞逻辑 ==========
-            elif stage2 and not game_clear:
+            elif stage2 and not game_clear and not game_paused:
                 hit_e2 = pygame.sprite.groupcollide(enemy2_group, bullets, True, True)
                 for _ in hit_e2:
                     score += 10
@@ -1754,7 +1993,7 @@ def main():
                             all_sprites.empty()
 
             # ========== 第三阶段碰撞逻辑 ==========
-            elif stage3 and not game_clear:
+            elif stage3 and not game_clear and not game_paused:
                 # enemy3碰撞
                 if not hidden_boss_phase and invincible_frame <= 0:
                     hit_e3_player = pygame.sprite.spritecollide(player, enemy3_group, True)
@@ -2031,12 +2270,13 @@ def main():
                                 game_over = True
                                 all_sprites.empty()
 
-            # 更新精灵（通关时不更新）
-            if not stage_transition and not game_clear:
+            # 更新精灵（通关时不更新，暂停时也不更新）
+            if not stage_transition and not game_clear and not game_paused:
                 all_sprites.update()
             elif not game_clear:
                 player.update()
-                bullets.update()
+                if not game_paused:
+                    bullets.update()
 
         # ============ 分层绘制 ============
         screen.fill(bg_color)
@@ -2203,7 +2443,7 @@ def main():
                 pygame.draw.circle(screen, color, (int(x), int(y)), int(radius))
                 if radius > 4:
                     pygame.draw.circle(screen, (255, 200, 150, 30),
-                                     (int(x - radius * 0.3), int(y - radius * 0.3)), int(radius * 0.4))
+                                       (int(x - radius * 0.3), int(y - radius * 0.3)), int(radius * 0.4))
 
             for bubble in lava_bubbles_right:
                 x, y, radius, speed, phase = bubble
@@ -2225,7 +2465,7 @@ def main():
                 pygame.draw.circle(screen, color, (int(x), int(y)), int(radius))
                 if radius > 4:
                     pygame.draw.circle(screen, (255, 200, 150, 30),
-                                     (int(x - radius * 0.3), int(y - radius * 0.3)), int(radius * 0.4))
+                                       (int(x - radius * 0.3), int(y - radius * 0.3)), int(radius * 0.4))
 
             # ========== 地面岩浆裂缝 ==========
             for i in range(10):
@@ -2236,7 +2476,7 @@ def main():
                     y = y_base + math.sin(i * 2 + j + pygame.time.get_ticks() / 800) * 10
                     color_val = 150 + int(80 * math.sin(i + j + pygame.time.get_ticks() / 600))
                     pygame.draw.rect(screen, (color_val, 30 + int(color_val * 0.15), 0),
-                                   (int(x), int(y), 12, 2))
+                                     (int(x), int(y), 12, 2))
 
             # 绘制暗影结界
             for ring in dark_ring_group:
@@ -2288,9 +2528,11 @@ def main():
             score_text = score_font.render(f"Final Score: {score}", True, WHITE)
             score_rect = score_text.get_rect(center=(width // 2, height * 0.52))
             screen.blit(score_text, score_rect)
-            tip_text = font.render("close to finish game...", True, GRAY)
-            tip_rect = tip_text.get_rect(center=(width // 2, height * 0.63))
-            screen.blit(tip_text, tip_rect)
+            # 只有一个 BACK MENU 选项
+            menu_font = pygame.font.Font(font_path, 30)
+            menu_text = menu_font.render("▶ BACK MENU", True, (255, 215, 0))
+            menu_rect = menu_text.get_rect(center=(width // 2, height * 0.63))
+            screen.blit(menu_text, menu_rect)
 
         # 打雷闪光（第二关和第三关）
         if (stage2 or stage3) and lightning_flash_frames > 0:
@@ -2310,13 +2552,46 @@ def main():
             flash_surf.fill(WHITE)
             screen.blit(flash_surf, (0, 0))
 
+        # ========== 暂停界面 ==========
+        if game_paused:
+            # 半透明遮罩
+            overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+
+            # PAUSE 文字
+            pause_font = pygame.font.Font(font_path, 80)
+            pause_text = pause_font.render("PAUSE", True, (255, 255, 100))
+            pause_rect = pause_text.get_rect(center=(width // 2, height // 2 - 120))
+            screen.blit(pause_text, pause_rect)
+
+            # 暂停菜单选项
+            for i, option in enumerate(pause_options):
+                y_pos = height // 2 - 20 + i * 50
+                if i == pause_menu_index:
+                    color = (255, 215, 0)
+                    prefix = "▶ "
+                else:
+                    color = (200, 200, 200)
+                    prefix = "  "
+
+                ft_option = pygame.font.Font(font_path, 30)
+                option_text = ft_option.render(f"{prefix}{option}", True, color)
+                option_rect = option_text.get_rect(center=(width // 2, y_pos))
+                screen.blit(option_text, option_rect)
+
         # UI文字
-        if not game_over:
+        if not game_over and not game_paused:
             screen.blit(font.render(f"Score: {score}", True, WHITE), (10, 10))
             screen.blit(font.render(f"EX剩余：{ex_count} ", True, (255, 180, 180)), (10, height - 40))
             if ex_power_timer > 0:
                 t = round(ex_power_timer / FPS, 1)
                 screen.blit(font.render(f"强化火力 {t}s", True, (255, 255, 100)), (10, height - 20))
+
+            # 暂停提示（游戏中）
+            pause_hint_font = pygame.font.Font(font_path, 16)
+            pause_hint = pause_hint_font.render("press ESC to pause", True, (150, 150, 150))
+            screen.blit(pause_hint, (width - 180, 10))
 
             if stage3 and not game_clear:
                 if not hidden_boss_phase:
@@ -2341,25 +2616,25 @@ def main():
                     # 显示 MISSION3 COMPLETE
                     ft = pygame.font.Font(font_path, 50)
                     txt = ft.render("MISSION3 COMPLETE", True, (0, 255, 0))
-                    rect = txt.get_rect(center=(width // 2, height // 2 - 60))
+                    rect = txt.get_rect(center=(width // 2, height // 2 - 80))
                     screen.blit(txt, rect)
                 else:
                     # 显示 EXCELLENT!
                     ft1 = pygame.font.Font(font_path, 80)
                     txt1 = ft1.render("EXCELLENT!", True, (255, 215, 0))
-                    rect1 = txt1.get_rect(center=(width // 2, height // 2 - 100))
+                    rect1 = txt1.get_rect(center=(width // 2, height // 2 - 140))
                     screen.blit(txt1, rect1)
 
                     # 显示分数
                     ft2 = pygame.font.Font(font_path, 40)
                     txt2 = ft2.render(f"Score: {score}", True, WHITE)
-                    rect2 = txt2.get_rect(center=(width // 2, height // 2))
+                    rect2 = txt2.get_rect(center=(width // 2, height // 2 - 40))
                     screen.blit(txt2, rect2)
 
-                    # 显示关闭提示
-                    ft3 = pygame.font.Font(font_path, 20)
-                    txt3 = ft3.render("close to quit", True, GRAY)
-                    rect3 = txt3.get_rect(center=(width // 2, height // 2 + 60))
+                    # 只有一个 BACK MENU 选项
+                    ft3 = pygame.font.Font(font_path, 30)
+                    txt3 = ft3.render("▶ BACK MENU", True, (255, 215, 0))
+                    rect3 = txt3.get_rect(center=(width // 2, height // 2 + 40))
                     screen.blit(txt3, rect3)
 
             if stage_transition:
@@ -2529,6 +2804,12 @@ def main():
                 screen.blit(txt, rect)
 
         pygame.display.flip()
+
+    # 如果游戏结束或通关后按下空格/回车，回到主菜单
+    if show_title:
+        # 重新开始游戏循环
+        main()
+        return
 
     pygame.mixer.music.stop()
     pygame.quit()
