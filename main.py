@@ -15,8 +15,9 @@ def main():
     pygame.key.stop_text_input()
 
     # 全屏+双缓冲
-    info = pygame.display.Info()
-    width, height = info.current_w, info.current_h
+    # info = pygame.display.Info()
+    # width, height = info.current_w, info.current_h
+    width,height=700,700
     screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF)
     pygame.display.set_caption("东方复刻")
 
@@ -26,7 +27,7 @@ def main():
 
     # ========== 加载画面函数 ==========
     def show_loading_screen(duration=1.0):
-        """显示加载画面，显示"东方复刻"标题和进度条 (不会擅自停止音乐)"""
+        """显示加载画面，显示"东方复刻"标题和进度条 """
         loading = True
         progress = 0
         font_path = r"C:\Windows\Fonts\simsun.ttc"
@@ -521,7 +522,7 @@ def main():
     kill_enemy2_target = 50
     kill_enemy2_count = 0
     boss2_exist = False
-    boss2_max_hp = 200
+    boss2_max_hp = 160
     boss2_current_hp = boss2_max_hp
     BOSS2_MOVE_SPEED = 2
     # 召唤敌机
@@ -852,8 +853,8 @@ def main():
             super().__init__()
             self.image = pygame.transform.scale(IMG_DARK_PLAYER, (40, 50))
             self.rect = self.image.get_rect(center=(x, y))
-            self.hp = 100
-            self.max_hp = 100
+            self.hp = 40
+            self.max_hp = 40
             self.index = index
             self.boss = boss
             self.shoot_timer = 0
@@ -1062,7 +1063,7 @@ def main():
                     dark_arrow_group.add(arrow)
 
             # 再随机补一些箭达到500支
-            for _ in range(452):
+            for _ in range(300):
                 angle = random.randint(0, 360)
                 speed = random.uniform(2, 6)
                 arrow = DarkArrowBullet(self.rect.centerx, self.rect.top - 20, angle, speed)
@@ -1083,10 +1084,10 @@ def main():
             self.burst_timer = 0
 
         def _fire_ring_burst(self):
-            angle_offset = self.burst_count * 30
+            angle_offset = self.burst_count * 45
             for i in range(12):
-                angle = i * 30 + angle_offset
-                speed = 2 + (self.burst_count % 3) * 0.5
+                angle = i * 45 + angle_offset
+                speed = 0.6 + (self.burst_count % 3) * 0.5
                 bullet = DarkRingBullet2(self.rect.centerx, self.rect.centery, angle, speed, self.burst_count % 3)
                 all_sprites.add(bullet)
                 dark_ring2_group.add(bullet)
@@ -2351,136 +2352,274 @@ def main():
                 pygame.draw.line(screen, color, (int(x), int(y)), (end_x, end_y), 1)
                 pygame.draw.circle(screen, (255, 255, 255), (int(x), int(y)), 1)
 
-        # 第三关：俯视图 - 两侧火山 + 中间黑色山路
+        # 第三关：俯视图纵向滚动卷轴 - 岩浆背景
         elif stage3:
-            # ========== 俯视图火山口（左右两侧） ==========
-            # 左侧火山口（俯视图 - 圆形）
-            crater_left_x = width * 0.15
-            crater_left_y = height * 0.5
-            # 火山口外圈（山体）
-            for i in range(8, 0, -1):
-                r = 80 + i * 20
-                color = (40 + i * 5, 25 + i * 3, 15 + i * 2)
-                pygame.draw.circle(screen, color, (int(crater_left_x), int(crater_left_y)), r)
-            # 火山口内圈（岩浆）
-            pygame.draw.circle(screen, (60, 20, 10), (int(crater_left_x), int(crater_left_y)), 80)
-            pygame.draw.circle(screen, (80, 30, 15), (int(crater_left_x), int(crater_left_y)), 70)
-            # 岩浆发光
-            glow_surf_left = pygame.Surface((200, 200), pygame.SRCALPHA)
+            # ========== 滚动参数 ==========
+            if not hasattr(sys.modules[__name__], 'scroll_y3'):
+                scroll_y3 = 0
+            else:
+                scroll_y3 = getattr(sys.modules[__name__], 'scroll_y3', 0)
+
+            scroll_speed = 2.5
+            scroll_y3 += scroll_speed
+            if scroll_y3 >= height:
+                scroll_y3 = 0
+
+            setattr(sys.modules[__name__], 'scroll_y3', scroll_y3)
+
+            # ========== 岩石系统 ==========
+            if not hasattr(sys.modules[__name__], 'rocks'):
+                rocks = []
+                for _ in range(25):
+                    size = random.randint(15, 55)
+                    points = []
+                    num_points = random.randint(5, 8)
+                    for i in range(num_points):
+                        angle = (i / num_points) * 2 * math.pi + random.uniform(-0.3, 0.3)
+                        dist = size * random.uniform(0.6, 1.0)
+                        px = math.cos(angle) * dist
+                        py = math.sin(angle) * dist
+                        points.append((px, py))
+                    base_color = random.randint(40, 80)
+                    color = (base_color + random.randint(-15, 15),
+                             base_color - random.randint(-10, 20),
+                             base_color - random.randint(20, 40))
+                    x = random.randint(20, width - 20)
+                    y = random.randint(0, height)
+                    rot_speed = random.uniform(-0.02, 0.02)
+                    rocks.append({
+                        'points': points,
+                        'x': x,
+                        'y': y,
+                        'color': color,
+                        'rot': random.uniform(0, 2 * math.pi),
+                        'rot_speed': rot_speed,
+                        'size': size,
+                        'speed_offset': random.uniform(0.7, 1.3)
+                    })
+                setattr(sys.modules[__name__], 'rocks', rocks)
+            else:
+                rocks = getattr(sys.modules[__name__], 'rocks')
+
+            # ========== 岩浆气泡 ==========
+            if not hasattr(sys.modules[__name__], 'lava_bubbles3'):
+                lava_bubbles3 = []
+                for _ in range(40):
+                    lava_bubbles3.append({
+                        'x': random.randint(10, width - 10),
+                        'y': random.randint(0, height),
+                        'radius': random.randint(3, 12),
+                        'speed': random.uniform(0.5, 2.0),
+                        'phase': random.uniform(0, 2 * math.pi),
+                        'alpha': random.randint(60, 180)
+                    })
+                setattr(sys.modules[__name__], 'lava_bubbles3', lava_bubbles3)
+            else:
+                lava_bubbles3 = getattr(sys.modules[__name__], 'lava_bubbles3')
+
+            # ========== 发光粒子 ==========
+            if not hasattr(sys.modules[__name__], 'glow_particles3'):
+                glow_particles3 = []
+                for _ in range(30):
+                    glow_particles3.append({
+                        'x': random.randint(0, width),
+                        'y': random.randint(0, height),
+                        'size': random.randint(2, 6),
+                        'life': random.randint(20, 60),
+                        'max_life': 60,
+                        'speed': random.uniform(0.3, 1.0)
+                    })
+                setattr(sys.modules[__name__], 'glow_particles3', glow_particles3)
+            else:
+                glow_particles3 = getattr(sys.modules[__name__], 'glow_particles3')
+
+            # ========== 1. 绘制岩浆背景 ==========
+            for y in range(height):
+                offset_y = (y + scroll_y3) % height
+                t = offset_y / height
+                if t < 0.3:
+                    r = 80 + 60 * (t / 0.3)
+                    g = 20 + 30 * (t / 0.3)
+                    b = 10 + 10 * (t / 0.3)
+                elif t < 0.7:
+                    local_t = (t - 0.3) / 0.4
+                    r = 140 + 80 * local_t
+                    g = 50 + 50 * local_t
+                    b = 10 + 10 * local_t
+                else:
+                    local_t = (t - 0.7) / 0.3
+                    r = 220 - 60 * local_t
+                    g = 100 - 40 * local_t
+                    b = 20 - 10 * local_t
+
+                wave = 15 * math.sin(y * 0.02 + pygame.time.get_ticks() / 1000)
+                wave2 = 10 * math.sin(y * 0.035 + pygame.time.get_ticks() / 1500 + 1.0)
+                r = min(255, max(20, r + int(wave * 0.3)))
+                g = min(200, max(10, g + int(wave2 * 0.2)))
+                b = min(60, max(5, b + int(wave * 0.1)))
+
+                pygame.draw.line(screen, (r, g, b), (0, y), (width, y))
+
+            # ========== 2. 岩浆纹理流动线条 ==========
+            for i in range(12):
+                base_y = (i * (height / 12) + scroll_y3 * 0.5) % height
+                for j in range(3):
+                    y = base_y + j * 8
+                    if y > height:
+                        y -= height
+                    points = []
+                    for x in range(0, width, 5):
+                        wave_y = 8 * math.sin(x * 0.02 + i * 1.5 + pygame.time.get_ticks() / 2000)
+                        points.append((x, y + wave_y))
+                    if len(points) > 1:
+                        try:
+                            color = (255, 150 + i * 5, 30)
+                            for p in range(len(points) - 1):
+                                pygame.draw.line(screen, color, points[p], points[p + 1], 1)
+                        except:
+                            pass
+
+            # ========== 3. 岩浆亮斑 ==========
+            for i in range(8):
+                x = (i * (width / 8) + scroll_y3 * 0.3) % width
+                y = (i * 50 + scroll_y3 * 0.7) % height
+                radius = 15 + 10 * math.sin(i * 2.3 + pygame.time.get_ticks() / 1500)
+                glow_alpha = 30 + 20 * math.sin(i * 1.7 + pygame.time.get_ticks() / 1000)
+                surf = pygame.Surface((int(radius * 4), int(radius * 4)), pygame.SRCALPHA)
+                for r in range(int(radius * 2), 0, -1):
+                    alpha = int(glow_alpha * (r / (radius * 2)))
+                    pygame.draw.circle(surf, (255, 200, 100, alpha), (int(radius * 2), int(radius * 2)), r)
+                screen.blit(surf, (int(x - radius * 2), int(y - radius * 2)))
+
+            # ========== 4. 绘制岩石 ==========
+            for rock in rocks:
+                rock_y = (rock['y'] + scroll_y3 * rock['speed_offset']) % (height + 50) - 25
+                rock_x = rock['x'] + 10 * math.sin(rock_y * 0.005 + rock['rot'])
+
+                if rock_y < -50:
+                    rock_y = height + 50
+                    rock['x'] = random.randint(20, width - 20)
+                if rock_x < -50:
+                    rock_x = width + 50
+                elif rock_x > width + 50:
+                    rock_x = -50
+
+                rock['rot'] += rock['rot_speed']
+
+                # 阴影
+                shadow_points = []
+                for px, py in rock['points']:
+                    rot_x = px * math.cos(rock['rot']) - py * math.sin(rock['rot'])
+                    rot_y = px * math.sin(rock['rot']) + py * math.cos(rock['rot'])
+                    shadow_points.append((rock_x + rot_x + 3, rock_y + rot_y + 3))
+                if len(shadow_points) > 2:
+                    try:
+                        pygame.draw.polygon(screen, (10, 10, 10), shadow_points)
+                    except:
+                        pass
+
+                # 岩石主体
+                points = []
+                for px, py in rock['points']:
+                    rot_x = px * math.cos(rock['rot']) - py * math.sin(rock['rot'])
+                    rot_y = px * math.sin(rock['rot']) + py * math.cos(rock['rot'])
+                    points.append((rock_x + rot_x, rock_y + rot_y))
+
+                if len(points) > 2:
+                    try:
+                        pygame.draw.polygon(screen, rock['color'], points)
+                        highlight_color = (min(255, rock['color'][0] + 40),
+                                           min(255, rock['color'][1] + 30),
+                                           min(255, rock['color'][2] + 20))
+                        pygame.draw.polygon(screen, highlight_color, points, 2)
+
+                        if rock['size'] > 30:
+                            for _ in range(random.randint(1, 3)):
+                                cx = rock_x + random.randint(-rock['size'] // 2, rock['size'] // 2)
+                                cy = rock_y + random.randint(-rock['size'] // 2, rock['size'] // 2)
+                                crack_len = random.randint(5, 15)
+                                crack_angle = random.uniform(0, 2 * math.pi)
+                                end_x = cx + math.cos(crack_angle) * crack_len
+                                end_y = cy + math.sin(crack_angle) * crack_len
+                                pygame.draw.line(screen, (30, 25, 20), (cx, cy), (end_x, end_y), 1)
+                    except:
+                        pass
+
+                # 大型岩石发光
+                if rock['size'] > 40:
+                    glow_surf = pygame.Surface((rock['size'] * 2 + 20, rock['size'] * 2 + 20), pygame.SRCALPHA)
+                    glow_color = (255, 150, 50, 15)
+                    pygame.draw.circle(glow_surf, glow_color, (rock['size'] + 10, rock['size'] + 10), rock['size'] + 10)
+                    screen.blit(glow_surf, (int(rock_x - rock['size'] - 10), int(rock_y - rock['size'] - 10)))
+
+            # ========== 5. 岩浆气泡 ==========
+            for bubble in lava_bubbles3:
+                bubble_y = (bubble['y'] + scroll_y3 * bubble['speed']) % height
+                bubble_x = bubble['x'] + 15 * math.sin(bubble_y * 0.01 + bubble['phase'])
+
+                pulse = 1 + 0.2 * math.sin(pygame.time.get_ticks() / 500 + bubble['phase'])
+                radius = bubble['radius'] * pulse
+
+                if radius > 1:
+                    glow_surf = pygame.Surface((int(radius * 4), int(radius * 4)), pygame.SRCALPHA)
+                    for r in range(int(radius * 2), 0, -1):
+                        alpha = int(bubble['alpha'] * 0.3 * (r / (radius * 2)))
+                        pygame.draw.circle(glow_surf, (255, 200, 100, alpha),
+                                           (int(radius * 2), int(radius * 2)), r)
+                    screen.blit(glow_surf, (int(bubble_x - radius * 2), int(bubble_y - radius * 2)))
+
+                    color = (255, 180 + int(30 * math.sin(pygame.time.get_ticks() / 400 + bubble['phase'])), 50)
+                    pygame.draw.circle(screen, color, (int(bubble_x), int(bubble_y)), int(radius))
+                    highlight = (255, 255, 200)
+                    pygame.draw.circle(screen, highlight,
+                                       (int(bubble_x - radius * 0.3), int(bubble_y - radius * 0.3)),
+                                       int(radius * 0.3))
+
+            # ========== 6. 发光粒子 ==========
+            for particle in glow_particles3:
+                particle['y'] = (particle['y'] + scroll_y3 * 0.8 + particle['speed']) % height
+                particle['life'] -= 1
+
+                if particle['life'] <= 0:
+                    particle['x'] = random.randint(0, width)
+                    particle['y'] = random.randint(0, height)
+                    particle['life'] = random.randint(20, 60)
+                    particle['size'] = random.randint(2, 6)
+
+                life_ratio = particle['life'] / particle['max_life']
+                alpha = int(150 * life_ratio)
+                size = int(particle['size'] * (0.3 + 0.7 * life_ratio))
+
+                if size > 0:
+                    surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+                    color = (255, 200 - int(100 * (1 - life_ratio)), 50, alpha)
+                    pygame.draw.circle(surf, color, (size, size), size)
+                    screen.blit(surf, (int(particle['x'] - size), int(particle['y'] - size)))
+
+            # ========== 7. 岩浆波纹 ==========
+            for i in range(5):
+                base_x = (i * (width / 5) + scroll_y3 * 0.2) % width
+                y_offset = (scroll_y3 * 0.6) % height
+                for j in range(3):
+                    y = (j * 30 + y_offset + i * 10) % height
+                    radius = 20 + 10 * math.sin(i * 2.1 + j * 1.3 + pygame.time.get_ticks() / 800)
+                    alpha = 20 + 10 * math.sin(i * 1.7 + pygame.time.get_ticks() / 600)
+                    surf = pygame.Surface((int(radius * 2), int(radius * 2)), pygame.SRCALPHA)
+                    pygame.draw.circle(surf, (255, 180, 80, alpha), (int(radius), int(radius)), int(radius), 1)
+                    screen.blit(surf, (int(base_x - radius + 20 * math.sin(i + j + pygame.time.get_ticks() / 1000)),
+                                       int(y - radius)))
+
+            # ========== 8. 底部边缘光晕 ==========
             for i in range(3):
-                r = 80 - i * 20
-                alpha = 60 - i * 15
-                pygame.draw.circle(glow_surf_left, (255, 100, 20, alpha), (100, 100), r)
-            screen.blit(glow_surf_left, (crater_left_x - 100, crater_left_y - 100))
+                y_pos = height - i * 20
+                alpha = max(60 - i * 15, 5)
+                glow_surf = pygame.Surface((width, 40), pygame.SRCALPHA)
+                glow_surf.fill((255, 80, 20, alpha))
+                screen.blit(glow_surf, (0, y_pos))
 
-            # 右侧火山口（俯视图 - 圆形）
-            crater_right_x = width * 0.85
-            crater_right_y = height * 0.5
-            for i in range(8, 0, -1):
-                r = 80 + i * 20
-                color = (40 + i * 5, 25 + i * 3, 15 + i * 2)
-                pygame.draw.circle(screen, color, (int(crater_right_x), int(crater_right_y)), r)
-            pygame.draw.circle(screen, (60, 20, 10), (int(crater_right_x), int(crater_right_y)), 80)
-            pygame.draw.circle(screen, (80, 30, 15), (int(crater_right_x), int(crater_right_y)), 70)
-            glow_surf_right = pygame.Surface((200, 200), pygame.SRCALPHA)
-            for i in range(3):
-                r = 80 - i * 20
-                alpha = 60 - i * 15
-                pygame.draw.circle(glow_surf_right, (255, 100, 20, alpha), (100, 100), r)
-            screen.blit(glow_surf_right, (crater_right_x - 100, crater_right_y - 100))
+            # 保存滚动值
+            setattr(sys.modules[__name__], 'scroll_y3', scroll_y3)
 
-            # ========== 中间黑色山路 ==========
-            # 山路基底
-            road_points = [
-                (width * 0.25, height),
-                (width * 0.28, height * 0.7),
-                (width * 0.32, height * 0.5),
-                (width * 0.36, height * 0.35),
-                (width * 0.4, height * 0.25),
-                (width * 0.5, height * 0.2),
-                (width * 0.6, height * 0.25),
-                (width * 0.64, height * 0.35),
-                (width * 0.68, height * 0.5),
-                (width * 0.72, height * 0.7),
-                (width * 0.75, height)
-            ]
-            pygame.draw.polygon(screen, (15, 15, 15), road_points)
-
-            # 山路纹理（裂缝和石块）
-            for _ in range(40):
-                x = random.randint(int(width * 0.3), int(width * 0.7))
-                y = random.randint(int(height * 0.25), int(height * 0.95))
-                size = random.randint(3, 12)
-                color_var = random.randint(25, 45)
-                pygame.draw.rect(screen, (color_var, color_var - 5, color_var - 10), (x, y, size, size // 2))
-
-            # 山路两侧的岩石
-            for i in range(15):
-                x = width * 0.25 + i * (width * 0.5 / 15) + random.randint(-20, 20)
-                y = height * 0.2 + i * (height * 0.75 / 15) + random.randint(-15, 15)
-                size = random.randint(8, 20)
-                pygame.draw.circle(screen, (25, 22, 20), (int(x), int(y)), size)
-
-            # ========== 岩浆气泡（从火山口冒出） ==========
-            for bubble in lava_bubbles_left:
-                x, y, radius, speed, phase = bubble
-                # 从左侧火山口位置生成
-                x = crater_left_x + math.sin(phase + pygame.time.get_ticks() / 2000) * 60
-                y -= speed
-                radius += math.sin(phase + pygame.time.get_ticks() / 500) * 0.3
-
-                if y < -radius:
-                    y = height
-                    x = crater_left_x + random.randint(-50, 50)
-                    radius = random.randint(4, 10)
-                    speed = random.uniform(0.8, 2)
-
-                bubble[0] = x
-                bubble[1] = y
-                bubble[2] = radius
-
-                color = (255, 80 + int(40 * math.sin(pygame.time.get_ticks() / 400 + phase)), 20)
-                pygame.draw.circle(screen, color, (int(x), int(y)), int(radius))
-                if radius > 4:
-                    pygame.draw.circle(screen, (255, 200, 150, 30),
-                                       (int(x - radius * 0.3), int(y - radius * 0.3)), int(radius * 0.4))
-
-            for bubble in lava_bubbles_right:
-                x, y, radius, speed, phase = bubble
-                x = crater_right_x + math.sin(phase + pygame.time.get_ticks() / 2000 + 2) * 60
-                y -= speed
-                radius += math.sin(phase + pygame.time.get_ticks() / 500 + 1) * 0.3
-
-                if y < -radius:
-                    y = height
-                    x = crater_right_x + random.randint(-50, 50)
-                    radius = random.randint(4, 10)
-                    speed = random.uniform(0.8, 2)
-
-                bubble[0] = x
-                bubble[1] = y
-                bubble[2] = radius
-
-                color = (255, 80 + int(40 * math.sin(pygame.time.get_ticks() / 400 + phase + 1)), 20)
-                pygame.draw.circle(screen, color, (int(x), int(y)), int(radius))
-                if radius > 4:
-                    pygame.draw.circle(screen, (255, 200, 150, 30),
-                                       (int(x - radius * 0.3), int(y - radius * 0.3)), int(radius * 0.4))
-
-            # ========== 地面岩浆裂缝 ==========
-            for i in range(10):
-                x_start = width * 0.2 + i * (width * 0.6 / 10)
-                y_base = height * 0.85 + math.sin(i * 1.5) * 20
-                for j in range(5):
-                    x = x_start + j * 8 + math.sin(j + pygame.time.get_ticks() / 1000 + i) * 5
-                    y = y_base + math.sin(i * 2 + j + pygame.time.get_ticks() / 800) * 10
-                    color_val = 150 + int(80 * math.sin(i + j + pygame.time.get_ticks() / 600))
-                    pygame.draw.rect(screen, (color_val, 30 + int(color_val * 0.15), 0),
-                                     (int(x), int(y), 12, 2))
-
-            # 绘制暗影结界
-            for ring in dark_ring_group:
-                ring.draw(screen)
 
         # 绘制精灵（通关时不绘制）
         if not game_over and not game_clear:
@@ -2696,7 +2835,7 @@ def main():
             # BOSS血条
             if not game_clear:
                 if not stage2 and not stage3 and boss_exist:
-                    bw = 800
+                    bw = width-20
                     bh = 22
                     bx = (width - bw) // 2
                     by = 50
@@ -2708,7 +2847,7 @@ def main():
                     screen.blit(boss_txt, rect)
 
                 if stage2 and boss2_exist:
-                    bw = 800
+                    bw = width-20
                     bh = 22
                     bx = (width - bw) // 2
                     by = 50
@@ -2720,7 +2859,7 @@ def main():
                     screen.blit(boss2_txt, rect)
 
                 if stage3 and dark_boss_exist:
-                    bw = 800
+                    bw = width-20
                     bh = 22
                     bx = (width - bw) // 2
                     by = 50
@@ -2732,7 +2871,7 @@ def main():
                     screen.blit(boss_txt, rect)
 
                 if stage3 and dark_boss2_exist:
-                    bw = 800
+                    bw = width-20
                     bh = 22
                     bx = (width - bw) // 2
                     by = 75
@@ -2745,7 +2884,7 @@ def main():
 
                 # 隐藏Boss血条（紫色->黑色->紫色渐变）
                 if hidden_boss_exist:
-                    bw = 800
+                    bw = width-20
                     bh = 22
                     bx = (width - bw) // 2
                     by = 100
